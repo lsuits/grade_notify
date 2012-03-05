@@ -10,25 +10,26 @@ class block_grade_notify extends block_list {
     }
 
     function get_content() {
-        global $USER;
+        global $CFG, $USER;
 
         $this->content->items = array();
         $this->content->icons = array();
         $this->content->footer = '';
 
         // User has permission
-        $student_courses = watchtower_get_user_courses_as_student($USER->id);
+        require_once($CFG->dirroot . '/blocks/grade_notify/lib.php');
+
+        $student_courses = grade_notify::courses_as_student($USER->id);
 
         // The user isn't enrolled as a student in his courses
         if (empty($student_courses)) {
             return $this->content;
         }
 
-        $select_script = $CFG->wwwroot.'/blocks/grade_notify/select.php';
-        $name = get_string('select', 'block_grade_notify');
-        $helpbutton = helpbutton('select', $name, 'block_grade_notify', true, false, '', true);
+        $select_str = get_string('select', 'block_grade_notify');
+        $select_url = new moodle_url('/blocks/grade_notify/select.php');
 
-        $this->content->items[] = $helpbutton . '<a href="'.$select_script.'">'. $name .'</a>';
+        $this->content->items[] = html_writer::link($select_url, $select_str);
 
         return $this->content;
     }

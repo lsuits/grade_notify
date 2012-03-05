@@ -8,3 +8,5 @@ $string['item_visible'] = 'Grade item $a->itemname is now visible in $a->fullnam
 $string['grade_changed'] = 'A new grade is posted for $a->itemname in $a->fullname. ($a->link)';
 $string['subject'] = $string['pluginname'];
 $string['explain'] = 'Selected courses will receive grade notifications.';
+
+$string['messageprovider:grade_changes'] = 'Gradebook change notifications';
