@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="blocks/grade_notify/db" VERSION="2012030509" COMMENT="XMLDB file for Moodle blocks/grade_notify"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="block_grade_notify_entries" COMMENT="The config entries students make for notifications">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="userid"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="11" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" COMMENT="The Moodle user" PREVIOUS="id" NEXT="courseid"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="11" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" COMMENT="The course the Moodle user is enrolled in." PREVIOUS="userid"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="bloc_use_cou_uix" UNIQUE="true" FIELDS="userid, courseid" COMMENT="A unique entry is defined with a User and a Course"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>
