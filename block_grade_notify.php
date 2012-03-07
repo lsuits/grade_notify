@@ -16,12 +16,10 @@ class block_grade_notify extends block_list {
         $this->content->icons = array();
         $this->content->footer = '';
 
-        // User has permission
         require_once($CFG->dirroot . '/blocks/grade_notify/lib.php');
 
         $student_courses = grade_notify::courses_as_student($USER->id);
 
-        // The user isn't enrolled as a student in his courses
         if (empty($student_courses)) {
             return $this->content;
         }
@@ -34,66 +32,61 @@ class block_grade_notify extends block_list {
         return $this->content;
     }
 
-    // Cron work here does the email notifications
     function cron() {
-        global $CFG, $USER;
+        global $CFG, $USER, $DB;
 
         require_once($CFG->dirroot . '/blocks/grade_notify/lib.php');
 
+        $interval = get_config('block_grade_notify', 'croninterval');
+        $lastcron = $DB->get_field('block', 'lastcron', array('name' => 'grade_notify'));
+
         $now = time();
 
-        // Make sure we're running at midnight
-        $sitetimezone = $CFG->timezone;
+        $runready = ($now - $lastcron) >= ($interval * 60 * 60);
 
-        // Midnight "tonight" is actually tomorrow morning
-        $midnight = usergetmidnight($now, $sitetimezone) + GRADE_NOTIFY_INTERVAL;
-
-        // 11 PM
-        $before_midnight = $midnight - 3600;
-
-        // It's not time to run yet
-        if ($now < $before_midnight) {
+        if (!$runready) {
             return false;
         }
 
         $attempts = array('success' => 0, 'failure' => 0);
 
-        // First get config users
-        $users = watchtower_get_distinct_config_users();
+        $users = grade_notify::distinct_config_users();
 
         foreach ($users as $userid => $user) {
-            // Attempt to get courses he/she is capable of viewing
-            $student_courses = watchtower_get_user_courses_as_student($userid);
+            $student_courses = grade_notify::courses_as_student($userid);
             $changes = array();
 
-            // empty means we can process the next student
             if (empty($student_courses)) {
                 continue;
             }
 
-            // Now get the configs for this user
-            $configs = watchtower_get_configs($userid);
+            $configs = grade_notify::user_configs($userid);
 
             // We're only concerned where the configs exists and valid courses
-            $courseids = array_intersect(array_keys($configs), array_keys($student_courses));
+            $courseids = array_intersect(
+                array_keys($configs), array_keys($student_courses)
+            );
 
             // For each valid course, see if a grade changed
             foreach ($courseids as $courseid) {
                 $course = $student_courses[$courseid];
 
-                $change = watchtower_gather_changes($now, $userid, $course);
-                if ($change != '') {
+                $change = grade_notify::gather_changes($now, $userid, $course);
+                if (!empty($change)) {
                     $changes[] = $change;
                 }
             }
 
-            $attempt = (watchtower_notify_grade_changes($userid, $changes)) ?
-                        'success' : 'failure';
+            $attempt = (grade_notify::notify_grade_changes($userid, $changes)) ?
+                'success' : 'failure';
+
             $attempts[$attempt] += 1;
         }
 
-        mtrace('Successfully emailed: ' . $attempts['success']);
-        mtrace('Failed email attempts: ' . $attempts['failure']);
+        $blockname = 'block_grade_notify';
+        mtrace(get_string('success_notified', $blockname, $attempts['success']));
+        mtrace(get_string('failure_notified', $blockname, $attempts['failure']));
+
         return true;
     }
 }

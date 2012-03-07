@@ -1,103 +1,90 @@
 <?php
 
-require_once("../../config.php");
-require_once("lib.php");
+require_once '../../config.php';
+require_once 'lib.php';
+require_once 'select_form.php';
 
-$student_courses = watchtower_get_user_courses_as_student($USER->id);
+$student_courses = grade_notify::courses_as_student($USER->id);
 
-if(empty($student_courses)) {
+if (empty($student_courses)) {
     print_error('no_permission', 'block_grade_notify');
 }
 
-require_js(array($CFG->wwwroot . '/blocks/grade_notify/jquery-1.4.2.min.js',
-                 $CFG->wwwroot . '/blocks/grade_notify/functions.js'));
+$course = $DB->get_record('course', array('id' => SITEID), '*', MUST_EXIST);
 
-$blockname = get_string('blockname', 'block_grade_notify');
-$script = get_string('select', 'block_grade_notify');
-$navigation = array(
-              array('name' => $blockname, 'link' => '', 'type' => 'title'),
-              array('name' => $script, 'link' => '', 'type' => 'title')
-              );
-print_header_simple($script, '', build_navigation($navigation));
-print_heading_with_help($script, 'select', 'block_grade_notify');
+$context = get_context_instance(CONTEXT_SYSTEM);
 
-// They posted their config
-if($data = data_submitted()) {
-    // Get all entries they have
-    $configs = watchtower_get_configs($USER->id);
+$base_url = new moodle_url('/blocks/grade_notify/select.php');
 
-    // Empty failures
-    $failures = array();
+$blockname = get_string('pluginname', 'block_grade_notify');
+$heading = get_string('select', 'block_grade_notify');
 
-    foreach($student_courses as $course) {
-        // If it's set in the POST, then the user wants notifications
-        // make sure that they currently don't have any settings
-        if(isset($data->{'selected_'.$course->id})) {
+$title = "$course->shortname: $heading";
 
-            // Unset, continue
-            if(isset($configs[$course->id])) {
-                unset($configs[$course->id]);
-                continue;
-            }
+$PAGE->set_url($base_url);
+$PAGE->set_context($context);
+$PAGE->set_heading($title);
+$PAGE->set_title($title);
 
-            $config = new stdclass;
-            $config->usersid = $USER->id;
-            $config->coursesid = $course->id;
+$PAGE->navbar->add($blockname);
+$PAGE->navbar->add($heading);
 
-            if(!$id = insert_record('block_grade_notify_entries', $config, true)) {
-                $failures[] = '<div class="failure">'.
-                     get_string('failure', 'block_grade_notify', $course).'</div>';
-            }
+$module = array(
+    'name' => 'block_grade_notify',
+    'fullpath' => '/blocks/grade_notify/js/module.js',
+    'requires' => array('base', 'dom')
+);
+
+$PAGE->requires->js_init_call('M.block_grade_notify.init', array(), false, $module);
+
+$form = new select_form(null, array('courses' => $student_courses));
+
+if ($form->is_cancelled()) {
+    redirect(new moodle_url('/my'));
+} else if ($data = $form->get_data()) {
+    $current_configs = grade_notify::user_configs($USER->id);
+
+    $fields = (array)$data;
+    unset($fields['submitbutton']);
+
+    foreach ($fields as $courseid => $checked) {
+        if (isset($current_configs[$courseid])) {
+            unset($current_configs[$courseid]);
+            continue;
         }
+
+        $config = new stdClass;
+        $config->userid = $USER->id;
+        $config->courseid = $courseid;
+
+        $DB->insert_record(grade_notify::TABLE_NAME, $config);
     }
 
-    // Delete remaining entries
-    if(!empty($configs)) {
-        $ids = implode(",", array_values($configs));
-        delete_records_select('block_grade_notify_entries', 'id IN('.$ids.')');
+    foreach ($current_configs as $courseid => $userid) {
+        $params = array('courseid' => $courseid, 'userid' => $USER->id);
+
+        $DB->delete_records(grade_notify::TABLE_NAME, $params);
     }
 
-    // Print out message
-    echo '<div class="changes">';
-    if(!empty($failures)) {
-        echo implode(' ', $failures);
-    } else {
-        echo '<div class="success">'.get_string('success', 'block_grade_notify').'</div>';
-    }
-    echo '</div>';
+    $posted = true;
 }
 
-$mapped_html = array_map('watchtower_print_checkbox_selector', $student_courses);
+$current_configs = grade_notify::user_configs($USER->id);
 
-// For the button
-$saved = count_records('block_grade_notify_entries', 'usersid', $USER->id);
-$disabled = ($saved == 0) ? "DISABLED" : '';
-$class = ($saved == 0) ? 'no ' : '';
-
-// Print out the form
-echo '<form method="POST">
-        <div class="grades_form">
-            '.(($saved > 0) ? print_explanation() : '').'
-            <div class="buttons">
-                <a class="all" href="select.php?selected=all">'.get_string('all').'</a> |
-                <a class="none" href="select.php?selected=none">'.get_string('none').'</a>
-            </div>
-        '.implode("<br/>", $mapped_html) .'
-        </div>
-        <br/>
-
-        <div class="buttons">
-            <input class="'.$class.'saved" '.$disabled.' name="submit" type="submit" value="'.get_string("submit").'"/>
-        </div>
-      </form>';
-
-print_footer();
-
-function print_explanation() {
-    $info = get_string('explain', 'block_grade_notify');
-    echo '<div class="info_courses" style="text-align: center; font-style: italic; margin-bottom: 17px;">
-            <span>
-            '.$info.'
-            </span>
-          </div>';
+$data = array();
+foreach (array_keys($current_configs) as $courseid) {
+    $data[$courseid] = 1;
 }
+
+$form->set_data($data);
+
+echo $OUTPUT->header();
+echo $OUTPUT->heading($heading);
+
+if (!empty($posted)) {
+    echo $OUTPUT->notification(get_string('changessaved'), 'notifysuccess');
+}
+
+$form->display();
+
+echo $OUTPUT->footer();
