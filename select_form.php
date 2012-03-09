@@ -12,12 +12,13 @@ class select_form extends moodleform {
 
         $m->addElement('header', 'header', get_string('select', 'block_grade_notify'));
 
-
         $all = html_writer::link('#', get_string('all'), array('class' => 'all'));
         $none = html_writer::link('#', get_string('none'), array('class' => 'none'));
 
         $links = implode(' / ', array($all, $none));
         $m->addElement('static', 'label', '', $links);
+
+        $m->addElement('checkbox', "0", '', ' ' . get_string('all_future', 'block_grade_notify'));
 
         foreach ($courses as $course) {
 

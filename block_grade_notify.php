@@ -37,7 +37,9 @@ class block_grade_notify extends block_list {
 
         require_once($CFG->dirroot . '/blocks/grade_notify/lib.php');
 
-        $interval = get_config('block_grade_notify', 'croninterval');
+        $blockname = 'block_grade_notify';
+
+        $interval = (int)get_config($blockname, 'croninterval');
         $lastcron = $DB->get_field('block', 'lastcron', array('name' => 'grade_notify'));
 
         $now = time();
@@ -73,7 +75,17 @@ class block_grade_notify extends block_list {
 
                 $change = grade_notify::gather_changes($now, $userid, $course);
                 if (!empty($change)) {
+                    $obj = new stdClass;
+                    $obj->userid = $userid;
+                    $obj->courseid = $course->id;
+
+                    $a = new stdClass;
+                    $a->link = grade_notify::generate_gradebook_link($obj)->out();
+                    $a->fullname = $course->fullname;
+
+                    $changes[] = get_string('course_link', $blockname, $a);
                     $changes[] = $change;
+                    $changes[] = '-------------------------------------------';
                 }
             }
 
@@ -83,7 +95,6 @@ class block_grade_notify extends block_list {
             $attempts[$attempt] += 1;
         }
 
-        $blockname = 'block_grade_notify';
         mtrace(get_string('success_notified', $blockname, $attempts['success']));
         mtrace(get_string('failure_notified', $blockname, $attempts['failure']));
 

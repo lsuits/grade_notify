@@ -6,7 +6,7 @@ abstract class grade_notify {
     public static function distinct_config_users() {
         global $DB;
 
-        $sql = 'SELECT DISTINCT(usersid) FROM {'.self::TABLE_NAME.'}';
+        $sql = 'SELECT DISTINCT(userid) FROM {'.self::TABLE_NAME.'}';
 
         return $DB->get_records_sql($sql);
     }
@@ -44,7 +44,7 @@ abstract class grade_notify {
             return true;
         }
 
-        $allow_messaging = (bool)get_config('moodle', 'messaging');
+        $allow_messaging = (bool) get_config('moodle', 'messaging');
 
         // A student will get notified regardless if messaging is enabled
         return $allow_messaging ?
@@ -71,28 +71,28 @@ abstract class grade_notify {
         $my_url = new moodle_url('/my');
 
         $eventdata = new stdClass;
-        $eventdata->userfrom = $userid;
+        $eventdata->userfrom = get_admin();
         $eventdata->userto = $userid;
         $eventdata->subject = get_string('subject', 'block_grade_notify');
         $eventdata->fullmessage = implode("\n\n", $changes);
-        $eventdata->fullmessageformat = FORMAT_MOODLE;
         $eventdata->fullmessagehtml = self::text_to_html($eventdata->fullmessage);
-        $eventdata->smallmessage = $eventdata->subject;
+        $eventdata->fullmessageformat = FORMAT_HTML;
+        $eventdata->smallmessage = $eventdata->fullmessagehtml;
 
         $eventdata->name = 'grade_changes';
         $eventdata->component = 'block_grade_notify';
         $eventdata->notification = 1;
-        $eventdata->contexturl = $my_url->out();
-        $eventdata->contexturlname = $eventdata->subject;
 
         // Only care if the message was saved or sent
-        return (bool) message_send($eventdata);
+        $messageid = message_send($eventdata);
+        return (bool)$messageid;
     }
 
     public static function gather_changes($now, $userid, $course) {
-        $from = $now - GRADE_NOTIFY_INTERVAL;
+        $interval = (int)get_config('block_grade_notify', 'croninterval');
+        $from = $now - ($interval * 60 * 60);
 
-        $item_changes = self::item_history_change($from, $now, $userid, $course);
+        $item_changes = self::item_history_changes($from, $now, $userid, $course);
         $grade_changes = self::grade_changes($from, $now, $userid, $course);
 
         $item_formatter = array('grade_notify', 'format_grade_item');
@@ -114,13 +114,11 @@ abstract class grade_notify {
                 grade item must be visible
                 grade item must NOT be a category of any kind
         */
-        $sql = "SELECT gg.id, gg.userid, gi.courseid, gi.itemname, c.fullname
+        $sql = "SELECT gg.id, gg.userid, gi.courseid, gi.itemname
                     FROM {grade_items} gi,
-                         {grade_grades} gg,
-                         {course} c
+                         {grade_grades} gg
                     WHERE gg.userid = :userid
                     AND gi.courseid = :courseid
-                    AND c.id = gi.courseid
                     AND gg.itemid = gi.id
                     AND gi.hidden = 0
                     AND gg.hidden = 0
@@ -140,7 +138,7 @@ abstract class grade_notify {
 
     public static function text_to_html($text) {
         $patn = '/\((.+)\)/';
-        $replr = '(<a href="\1">\1</a>)';
+        $replr = '(<a href="\1">'.get_string('view_grades', 'block_grade_notify').'</a>)';
         return str_replace("\n", "<br/>", preg_replace($patn, $replr, $text));
     }
 
@@ -151,12 +149,10 @@ abstract class grade_notify {
     }
 
     public static function format_grade_item($item) {
-        $item->link = self::generate_gradebook_link($item)->out();
         return get_string('item_visible', 'block_grade_notify', $item);
     }
 
     public static function format_grade_grades($grade) {
-        $grade->link = self::generate_gradebook_link($grade)->out();
         return get_string('grade_changed', 'block_grade_notify', $grade);
     }
 
@@ -164,11 +160,9 @@ abstract class grade_notify {
         global $DB;
 
         // Attempt to get all grade item changes
-        $sql = "SELECT gi.*, c.fullname, {$userid} AS userid
-                    FROM {grade_items} gi,
-                         {course} c
+        $sql = "SELECT gi.*, {$userid} AS userid
+                    FROM {grade_items} gi
                     WHERE gi.courseid = :courseid
-                    AND gi.courseid = c.id
                     AND gi.hidden = 0
                     AND (gi.timemodified > :from AND gi.timemodified < :now)";
 

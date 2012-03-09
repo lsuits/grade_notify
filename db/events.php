@@ -8,6 +8,8 @@ $mapper = function($event_name) {
     );
 };
 
-$events = array('course_deleted', 'user_deleted');
+$events = array(
+    'course_deleted', 'user_deleted', 'role_assigned', 'role_unassigned'
+);
 
 $handlers = array_combine($events, array_map($mapper, $events));

@@ -6,10 +6,6 @@ require_once 'select_form.php';
 
 $student_courses = grade_notify::courses_as_student($USER->id);
 
-if (empty($student_courses)) {
-    print_error('no_permission', 'block_grade_notify');
-}
-
 $course = $DB->get_record('course', array('id' => SITEID), '*', MUST_EXIST);
 
 $context = get_context_instance(CONTEXT_SYSTEM);
@@ -60,7 +56,12 @@ if ($form->is_cancelled()) {
         $DB->insert_record(grade_notify::TABLE_NAME, $config);
     }
 
+    // We don't want to delete configs in hidden courses
     foreach ($current_configs as $courseid => $userid) {
+        if (!isset($student_courses[$courseid])) {
+            continue;
+        }
+
         $params = array('courseid' => $courseid, 'userid' => $USER->id);
 
         $DB->delete_records(grade_notify::TABLE_NAME, $params);
