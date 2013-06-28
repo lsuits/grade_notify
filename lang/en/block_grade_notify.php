@@ -1,4 +1,6 @@
 <?php
+$string['grade_notify:addinstance'] = 'Add a new Grade Notifications block';
+$string['grade_notify:myaddinstance'] = 'Add a new Grade Notifications block';
 
 $string['pluginname'] = 'Grade Notifications';
 $string['select'] = 'Setup Grade Notifications';

@@ -11,7 +11,9 @@ class block_grade_notify extends block_list {
 
     function get_content() {
         global $CFG, $USER;
-
+        
+        $this->content = is_null($this->content) ? new stdClass : $this->content;
+        
         $this->content->items = array();
         $this->content->icons = array();
         $this->content->footer = '';
