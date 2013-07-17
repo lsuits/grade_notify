@@ -8,6 +8,10 @@ class block_grade_notify extends block_list {
     function applicable_formats() {
         return array('site' => true, 'my' => true);
     }
+    
+    function has_config() {
+        return true;
+    }
 
     function get_content() {
         global $CFG, $USER;
