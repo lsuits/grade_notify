@@ -29,7 +29,7 @@ abstract class grade_notify {
             $gradebookroles = get_config('moodle', 'gradebookroles');
 
             // If the user is in the gradeable roles, then he/she is a student
-            $context = get_context_instance(CONTEXT_COURSE, $course->id);
+            $context = context_course::instance($course->id);
             $roles = explode(",", $gradebookroles);
 
             $students = get_role_users($roles, $context);
@@ -71,7 +71,7 @@ abstract class grade_notify {
         $my_url = new moodle_url('/my');
 
         $eventdata = new stdClass;
-        $eventdata->userfrom = get_admin();
+        $eventdata->userfrom = $userid;
         $eventdata->userto = $userid;
         $eventdata->subject = get_string('subject', 'block_grade_notify');
         $eventdata->fullmessage = implode("\n\n", $changes);
