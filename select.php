@@ -8,7 +8,7 @@ $student_courses = grade_notify::courses_as_student($USER->id);
 
 $course = $DB->get_record('course', array('id' => SITEID), '*', MUST_EXIST);
 
-$context = get_context_instance(CONTEXT_SYSTEM);
+$context = context_system::instance();
 
 $base_url = new moodle_url('/blocks/grade_notify/select.php');
 

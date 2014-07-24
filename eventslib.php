@@ -21,7 +21,7 @@ abstract class grade_notify_handler {
     }
 
     private static function assignment_to_params($ra) {
-        $context = get_context_instance_by_id($ra->contextid, MUST_EXIST);
+        $context = context::instance_by_id($ra->contextid, MUST_EXIST);
 
         return array('userid' => $ra->userid, 'courseid' => $context->instanceid);
     }
