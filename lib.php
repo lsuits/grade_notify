@@ -31,9 +31,9 @@ abstract class grade_notify {
             // If the user is in the gradeable roles, then he/she is a student
             $context = context_course::instance($course->id);
             $roles = explode(",", $gradebookroles);
-
-            $students = get_role_users($roles, $context);
-
+            foreach($roles as $r) {
+                $students = get_role_users($r, $context, true, 'u.id, u.lastname, u.firstname, u.firstnamephonetic, u. lastnamephonetic, u.middlename, u.alternatename, u.picture, u.imagealt, u.email', 'u.lastname ASC, u.firstname ASC');
+            }
             return isset($students[$userid]);
         });
     }
